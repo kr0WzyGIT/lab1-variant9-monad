@@ -17,18 +17,15 @@ object WarehouseReader:
     )
 
   def shippingCost(weight: Double, totalPrice: BigDecimal): Reader[WarehouseConfig, BigDecimal] =
-    for
-      isFree <- freeShipping(totalPrice)
-      cost <- Reader { config =>
-        if isFree then BigDecimal(0)
-        else
-          config.shippingRates
-            .sortBy(_.maxWeight)
-            .find(weight <= _.maxWeight)
-            .map(_.cost)
-            .getOrElse(BigDecimal(900))
-      }
-    yield cost
+    Reader { (config: WarehouseConfig) =>
+      if totalPrice >= config.freeShippingFrom then BigDecimal(0)
+      else
+        config.shippingRates
+          .sortBy(_.maxWeight)
+          .find(rate => weight <= rate.maxWeight)
+          .map(_.cost)
+          .getOrElse(BigDecimal(900))
+    }
 
   def canAssemble(order: Order, inventory: Map[String, InventoryItem]): Reader[WarehouseConfig, Boolean] =
     Reader { config =>
